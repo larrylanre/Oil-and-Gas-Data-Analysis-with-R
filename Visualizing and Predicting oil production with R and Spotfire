@@ -1,0 +1,243 @@
+###### Practicum 1 : Regis University ######
+
+###################
+# Title : Oil and Gas Production Analysis and Predictive inference with R and Spotfire
+# Data Source: IHS 
+# Author : Olanrewaju Salami
+# MSDS692 Data Science Practicum 1
+###################
+
+##############Packages#############
+library(RCurl)
+library(rpart)
+install.packages("stats")
+library(stats) 
+library(readr)
+
+### Import dataset 
+Reduced_Oil_and_Gas_Production <- read_csv("C:/Users/Ayo/Desktop/Ethics/Practicum1/Reduced Oil and Gas Production.csv")
+setwd("C:/Users/Ayo/Desktop/Ethics/Practicum1/Reduced Oil and Gas Production.csv")
+
+##### Cleaning dataset for Clusterying 
+mydata <- Reduced_Oil_and_Gas_Production
+
+##Checking the first six dataset
+head(mydata)
+class(mydata)
+
+##Checking the datatypes and the characteristics of the dataset
+str(mydata)
+
+##Analyze the data to find if categorical variables are there and if so, to transform them.
+oilclusters = as.data.frame(unclass(mydata))
+dim(oilclusters)
+summary(oilclusters)
+
+##Remove some categorical variables
+oilclusters[oilclusters=='?'] <- NA
+oilclusters$operator <-  NULL
+oilclusters$year <-  NULL
+oilclusters$month <-  NULL
+oilclusters$dayson <-  NULL
+oilclusters$countyname <-  NULL
+oilclusters$fieldname <-  NULL
+oilclusters$prodzone <-  NULL
+##Remove any records that have NAs
+clean = na.omit(oilclusters)
+str(clean)
+
+###Once we are done pre-processing to ensure the data is ready for further applications, we scaled and center the dataset.
+scaled = as.matrix(scale(clean))
+summary(scaled)
+
+##Creating K means clustring model with 5 centers, using oil specific columns & Display cluster centers:
+clust <- kmeans(scaled[,c(1,4,7,8)], centers=5)
+
+#To view the centers of each variables 
+fitted(clust, method = "centers")
+
+#To View the % of Fitted: This model has approx. 70% fitted
+print(clust)
+
+#To view the 5 cluster centers
+clust$centers
+table(clust$cluster)
+
+##Inspect the center of each cluster using barplot
+barplot(t(clust$centers), beside = TRUE,xlab="cluster Center", ylab="value")
+
+##We draw a scatter plot of the data and color the points according to the clusters
+plot(clean, col = clust$cluster)
+plot(scaled, col = clust$cluster)
+plot(clust$centers, col = clust$cluster)
+##Plotting the center of the clusters
+points(clust$centers,pch=8,col=1:3,cex = 2)
+
+##clustering based on optimal value 
+new <- scaled
+str(new)
+summary(new)
+##Finding the optimal number of K
+##We set the numbers of K to be determined between 2 and 10. K mean will take this range and consider the optimal number of K to use.
+nk = 2:10
+set.seed(87231)
+WSS = sapply(nk, function(k){
+  kmeans(new, centers=k)$tot.withinss
+  })
+WSS
+##Plotting maximum number of K
+plot(nk, WSS, type="l", xlab= "number of k", ylab="within sum of squares")
+# Here we see that the highest number of K is 4 just as we saw earlier
+
+#Plot Clusters based on specific column: here we use oil, proppant and stage column
+new1 <- kmeans(new[,c(1,10,11)], centers=3)
+cluster <- as.factor(new1$cluster)
+plot(new1$centers,col=cluster,pch=16,cex=2)
+plot(new,col=(new1$centers), main = "K Mean Clustering", pch=16, cex=2)
+points(new1$centers,pch=8,col=1:5,cex = 2)
+
+##Visualizing the clusters
+library(cluster)
+library(fpc)
+plotcluster(new,new1$cluster)
+clusplot(new, new1$cluster, color=TRUE, shade=TRUE,labels=2,lines=0)
+new1
+
+######Ranking 
+##Bringing in Data for Ranking
+library(dplyr)
+rank <- mydata
+##Remove na's
+rankn <- na.omit(rank)
+##Ranking based on Oil
+ranking <- group_by(rankn, prodzone)%>%summarize(rankn = mean(oil))%>%as.data.frame%>%arrange(desc(rankn))
+ranking
+ranking <- group_by(rankn, countyname)%>%summarize(rankn = mean(oil))%>%as.data.frame%>%arrange(desc(rankn))
+ranking
+ranking <- group_by(rankn, fieldname)%>%summarize(rankn = mean(oil))%>%as.data.frame%>%arrange(desc(rankn))
+ranking
+
+##Ranking based on Gas
+ranking <- group_by(rankn, prodzone)%>%summarize(rankn = mean(gas))%>%as.data.frame%>%arrange(desc(rankn))
+ranking
+ranking <- group_by(rankn, countyname)%>%summarize(rankn = mean(gas))%>%as.data.frame%>%arrange(desc(rankn))
+ranking
+ranking <- group_by(rankn, fieldname)%>%summarize(rankn = mean(gas))%>%as.data.frame%>%arrange(desc(rankn))
+ranking
+
+##Rank Feature By Importance
+# load the library
+library(mlbench)
+library(caret)
+library(lattice)
+library(ggplot2)
+
+##Load the dataset
+set.seed(7879)
+head(clean)
+##Prepare training scheme
+control <- trainControl(method="repeatedcv", number=10, repeats=3)
+# Train the model using knn
+model <- train(stages~., data=clean, method="knn", preProcess="scale", trControl=control)
+#Determine variable importance
+importance <- varImp(model, scale=FALSE)
+#Genarate Variable importance
+print(importance)
+# plot importance
+plot(importance)
+
+
+#####To Determine Corroletion between variables 
+#Ensure the results are repeatable
+set.seed(54357)
+# load the library
+library(mlbench)
+library(caret)
+# load the data
+head(clean)
+# calculate correlation matrix
+correlationMatrix <- cor(clean[,1:11])
+# summarize the correlation matrix
+print(correlationMatrix)
+# find attributes that are highly corrected (ideally >0.75)
+highlyCorrelated <- findCorrelation(correlationMatrix, cutoff=0.5)
+# print indexes of highly correlated attributes
+print(highlyCorrelated)
+
+
+#####Predictive analysis with Radom Forest #####
+##Prepare data for predictive analysis
+oildat <- Reduced_Oil_and_Gas_Production
+oildata = na.omit(oildat)
+head(oildata)
+dim(oildata)
+class(oildata)
+str(oildata)
+#Change ? to NA
+oildata[oildata=='?'] <- NA
+#Remove operator column due to numeric prediction
+oildata$operator <-  NULL
+#Plot a Barchart of number of stages
+barplot(table(oildata$stages))
+#Create categories for number of stages 
+oildata$oil[oildata$stages == 30] <- 'Lowstages'
+oildata$oil[oildata$stages == 40] <- 'Midstages'
+oildata$oil[oildata$stages == 45] <- 'Highstages'
+oildata$oil <- as.factor(oildata$oil)
+table(oildata$oil)
+#This classifies the number of stages into High, Mid and Low
+
+####Packages####
+library(randomForest)
+library(ggplot2)
+library(rpart)
+library(caret)
+set.seed(9567)
+#Creating training and testing dataset
+#This places 70% of the observations in the original dataset into train and the remaining 30% of the observations into test.
+samp <- sample(nrow(oildata), 0.7 * nrow(oildata))
+train <- oildata[samp, ]
+test <- oildata[-samp, ]
+#Apply RF to train dataset
+model <- randomForest(oil ~ stages + proppant, data = train)
+model
+#We can test the Accuracy as follows: I.e using the metrix 
+(5589 + 13516 + 8689) / nrow(train)
+# To determine the important factor in this model
+print(importance(model, type = 2))
+#We see 500 trees built, and the model randomly sampled 1 predictor at each split. It also shows a matrix containing prediction vs actual, as well as classification error for each class.
+#To test the model on the test data set.
+pred <- predict(model, newdata = test)
+table(pred, test$oil)
+#We can test the Accuracy as follows:
+(2356 + 5907 + 3650) / nrow(test)
+#Here, we achieved 100% accuracy 
+
+
+####Predictive Analysis with Decision Tree
+library(party)
+set.seed(9007)
+#This places 70% of the observations in the original dataset into train and the remaining 30% of the observations into test.
+samp <- sample(nrow(oildata), 0.7 * nrow(oildata))
+train <- oildata[samp, ]
+test <- oildata[-samp, ]
+tree <- ctree(stages ~ oil + proppant, data = train)
+tree
+plot(tree)
+
+#Performing 10 Fold Cross Validation on model
+set.seed(8865)
+# load the library
+library(caret)
+# load the dataset
+head(oildata)
+# Define training control
+train_control <- trainControl(method="cv", number=10)
+# fix the parameters of the algorithm
+grid <- expand.grid(mtry=c(2,3,4))
+# train the model with rf
+model2 <- train(stages~oil + proppant, data=oildata, trControl=train_control, method="rf", tuneGrid=grid)
+# summarize results
+print(model2)
+model2
+
