@@ -241,5 +241,3 @@ model2 <- train(stages~oil + proppant, data=oildata, trControl=train_control, me
 print(model2)
 model2
 
-https://github.com/larrylanre/Oil-and-Gas-Data-Analysis-with-R/blob/master/wk5_1.png
-
