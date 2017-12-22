@@ -1,9 +1,7 @@
-###### Practicum 1 : Regis University ######
-
 ###################
 # Title : Oil and Gas Production Analysis and Predictive inference with R and Spotfire
 # Data Source: IHS 
-# Author : Olanrewaju Salami
+# Author : Larry Salami
 ###################
 
 ##############Packages#############
@@ -14,8 +12,8 @@ library(stats)
 library(readr)
 
 ### Import dataset 
-Reduced_Oil_and_Gas_Production <- read_csv("C:/Users/Ayo/Desktop/Ethics/Practicum1/Reduced Oil and Gas Production.csv")
-setwd("C:/Users/Ayo/Desktop/Ethics/Practicum1/Reduced Oil and Gas Production.csv")
+Reduced_Oil_and_Gas_Production <- read_csv("C:/Users/Ayo/Desktop/Reduced Oil and Gas Production.csv")
+setwd("C:/Users/Ayo/Desktop/Reduced Oil and Gas Production.csv")
 
 ##### Cleaning dataset for Clusterying 
 mydata <- Reduced_Oil_and_Gas_Production
